@@ -1,0 +1,158 @@
+.net 6 web api
+	
+Create the GET endpoint to list balance transactions with pagination. 
+o	By calling the endpoint above make a request to the public `Stripe` API using endpoint from this document https://stripe.com/docs/testing to list balance 
+o	Wrap Stripe API calls in try-catch blocks to handle Stripe API errors
+o	Parse retrieved API response data in JSON to variable/object.
+
+The below code provides a simplified example of a .NET 6 Web API endpoint for listing balance transactions, making a request to the Stripe API, and parsing the API response into an object.
+
+In order to call the Stripe API, you would need to add the `Stripe.net` NuGet package to your project.
+
+```csharp
+// Install the Stripe.net library via NuGet Package Manager
+// PM> Install-Package Stripe.net
+```
+
+Here is an example of how you could implement this in a controller in your .NET 6 Web API project:
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using Stripe;
+using System;
+using System.Threading.Tasks;
+
+[Route("api/[controller]")]
+[ApiController]
+public class BalanceTransactionsController : ControllerBase
+{
+    private readonly string _stripeApiKey = "sk_test_YourTestKey";  // replace with your actual Stripe API key
+    
+    [HttpGet]
+    public async Task<IActionResult> GetBalanceTransactions(int limit = 10, int offset = 0)
+    {
+        try
+        {
+            StripeConfiguration.ApiKey = _stripeApiKey;
+
+            var options = new BalanceTransactionListOptions
+            {
+                Limit = limit,
+                StartingAfter = offset.ToString(),
+            };
+
+            var service = new BalanceTransactionService();
+            StripeList<BalanceTransaction> balanceTransactions = await service.ListAsync(options);
+            
+            // map Stripe's response to your model if necessary
+            return Ok(balanceTransactions);
+        }
+        catch (StripeException ex)
+        {
+            return BadRequest($"An error occurred while trying to retrieve balance transactions: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Internal server error: {ex.Message}");
+        }
+    }
+}
+```
+
+In this code:
+
+- We're defining a `GET` endpoint for listing balance transactions.
+- The `limit` parameter controls the maximum number of transactions to return, and the `offset` parameter controls where to start retrieving transactions from.
+- We're using `StripeConfiguration.ApiKey` to set our Stripe API key.
+- We're using the `BalanceTransactionService` from the `Stripe.net` library to interact with the Stripe API. This service handles making the HTTP request to Stripe, parsing the response, and returning a `StripeList<BalanceTransaction>` object.
+- We're wrapping our Stripe API calls in a `try-catch` block to handle any `StripeException` instances that might be thrown.
+
+Remember to replace the `_stripeApiKey` with your actual Stripe API key.
+
+This is a simplified example, and your actual implementation might require more complex error handling, request validation, and data transformation.
+
+Create ExceptionsMiddleware to handle Stripe exception
+
+Creating an exception middleware for handling Stripe exceptions (or any exceptions in general) is a great way to centralize error handling logic in your application. Here is an example of how to create a middleware in ASP.NET Core to handle Stripe exceptions:
+
+```csharp
+using Microsoft.AspNetCore.Http;
+using Stripe;
+using System;
+using System.Net;
+using System.Threading.Tasks;
+
+public class ExceptionMiddleware
+{
+    private readonly RequestDelegate _next;
+
+    public ExceptionMiddleware(RequestDelegate next)
+    {
+        _next = next;
+    }
+
+    public async Task InvokeAsync(HttpContext httpContext)
+    {
+        try
+        {
+            await _next(httpContext);
+        }
+        catch (StripeException ex)
+        {
+            await HandleStripeExceptionAsync(httpContext, ex);
+        }
+        catch (Exception ex)
+        {
+            await HandleExceptionAsync(httpContext, ex);
+        }
+    }
+
+    private Task HandleStripeExceptionAsync(HttpContext context, StripeException exception)
+    {
+        context.Response.ContentType = "application/json";
+        context.Response.StatusCode = (int)HttpStatusCode.BadRequest; // or any other suitable status code
+        return context.Response.WriteAsync(new ErrorDetails()
+        {
+            StatusCode = context.Response.StatusCode,
+            Message = $"Stripe error: {exception.Message}"
+        }.ToString());
+    }
+
+    private Task HandleExceptionAsync(HttpContext context, Exception exception)
+    {
+        context.Response.ContentType = "application/json";
+        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        return context.Response.WriteAsync(new ErrorDetails()
+        {
+            StatusCode = context.Response.StatusCode,
+            Message = $"Internal Server error: {exception.Message}"
+        }.ToString());
+    }
+}
+
+public class ErrorDetails
+{
+    public int StatusCode { get; set; }
+    public string Message { get; set; }
+
+    public override string ToString()
+    {
+        return System.Text.Json.JsonSerializer.Serialize(this);
+    }
+}
+```
+
+The above middleware catches exceptions and formats them into a consistent response structure. The `HandleStripeExceptionAsync` method is used to handle `StripeException` instances and the `HandleExceptionAsync` method is used to handle any other unhandled exceptions.
+
+Next, you need to plug this middleware into the application's pipeline. Add the following code to the `Configure` method in your `Startup.cs` file:
+
+```csharp
+public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+{
+    app.UseMiddleware<ExceptionMiddleware>();
+
+    // ... your other middleware registrations
+}
+```
+
+Please note that the order of middleware in ASP.NET Core is important. The above code adds the `ExceptionMiddleware` at the beginning of the pipeline, ensuring that it can catch any exceptions that occur in later middleware or in your controllers.

@@ -16,23 +16,19 @@ namespace UseCase2.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetBalance(CancellationToken cancellationToken)
+        [Route("balance")]
+        public async Task<IActionResult> GetBalance(CancellationToken cancellationToken = default)
         {
-            try
-            {
-                var balance = await _stripeService.GetBalance(cancellationToken);
-                return Ok(balance);
-            }
-            catch (Stripe.StripeException e)
-            {
-                // Handle the Stripe errors
-                return BadRequest(new { error = e.Message });
-            }
-            catch (Exception e)
-            {
-                // Handle any other errors
-                return StatusCode(500, new { error = e.Message });
-            }
+            var balance = await _stripeService.GetBalanceAsync(cancellationToken);
+            return Ok(balance);
+        }
+
+        [HttpGet]
+        [Route("transactions")]
+        public async Task<IActionResult> GetBalanceTransactions(int limit = 10, string startingAfter = null, CancellationToken cancellationToken = default)
+        {
+            var result = await _stripeService.GetBalanceTransactionsAsync(limit, startingAfter, cancellationToken);
+            return Ok(result);
         }
     }
 }

@@ -1,5 +1,6 @@
 using Stripe;
 
+using UseCase2;
 using UseCase2.Interfaces;
 using UseCase2.Services;
 
@@ -10,6 +11,7 @@ var stripeApiKey = builder.Configuration["StripeApiKey"];
 StripeConfiguration.ApiKey = stripeApiKey;
 
 builder.Services.AddScoped<BalanceService>();
+builder.Services.AddScoped<BalanceTransactionService>();
 builder.Services.AddScoped<IStripeService, StripeService>();
 
 builder.Services.AddControllers();
@@ -18,6 +20,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

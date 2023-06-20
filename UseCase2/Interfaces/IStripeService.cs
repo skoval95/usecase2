@@ -4,6 +4,8 @@ namespace UseCase2.Interfaces
 {
     public interface IStripeService
     {
-        Task<Balance> GetBalance(CancellationToken cancellationToken);
+        Task<Balance> GetBalanceAsync(CancellationToken cancellationToken = default);
+
+        Task<StripeList<BalanceTransaction>> GetBalanceTransactionsAsync(int limit, string startingAfter, CancellationToken cancellationToken = default);
     }
 }

@@ -1,0 +1,66 @@
+Generate application description based this information: Generate app description based on this:         [HttpGet]
+        [Route("balance")]
+        public async Task<IActionResult> GetBalance(CancellationToken cancellationToken = default)
+        {
+            var balance = await _stripeService.GetBalanceAsync(cancellationToken);
+            return Ok(balance);
+        }
+
+        [HttpGet]
+        [Route("transactions")]
+        public async Task<IActionResult> GetBalanceTransactions(int limit = 10, string startingAfter = null, CancellationToken cancellationToken = default)
+        {
+            var result = await _stripeService.GetBalanceTransactionsAsync(limit, startingAfter, cancellationToken);
+            return Ok(result);
+        }
+		
+		
+		
+Introducing "Balance Tracker Pro", a seamless, robust, and intuitive mobile application designed to provide users with real-time tracking of their financial balances and transactions. This application connects with your Stripe account and gives you immediate access to your balance information as well as transaction data at the tap of a button. 
+
+Key Features:
+
+1. **Real-Time Balance Information**: Get up-to-the-minute balance details from your Stripe account. Whether you want to check your balance frequently or just need to know it before making a significant purchase, our app is your reliable assistant.
+
+2. **Transaction History**: Get a detailed overview of your balance transactions in a chronological manner. This feature not only displays your most recent transactions but also allows you to set a limit on the number of transactions you want to review.
+
+3. **After-Action Report**: Use the 'startingAfter' parameter to get a list of transactions that occurred after a specified event. This is a valuable tool for monitoring the financial impact of specific actions or understanding your financial timeline.
+
+4. **Asynchronous Functionality**: The application utilizes async-await tasks for better performance and smoother user experience. It means you can request data and it will be fetched in the background without blocking the user interface, providing you with a faster, more responsive app.
+
+5. **Cancellation Handling**: The application supports cancellation tokens. You can cancel a running request anytime, providing better control over your data fetch operations and saving bandwidth.
+
+6. **Secure and Reliable**: Your data is fetched securely from Stripe and is always up-to-date, ensuring you can rely on the figures provided.
+
+"Balance Tracker Pro" is a must-have tool for individuals and businesses that use Stripe and wish to keep their financial information just a tap away. Download now to start managing your finances more effectively.
+
+
+
+Write few examples how to consume API methods mentioned earlier usin curl
+
+
+Sure, here are a few examples of how to use cURL to interact with the API endpoints described in your previous code snippets:
+
+1. **Getting the Balance**:
+```bash
+curl -X GET 'https://your-api-url/balance' -H 'Authorization: Bearer YOUR_API_KEY'
+```
+
+Replace `'https://your-api-url/balance'` with the actual URL of your API endpoint and `'YOUR_API_KEY'` with your API key.
+
+2. **Getting Balance Transactions with default limit**:
+```bash
+curl -X GET 'https://your-api-url/transactions' -H 'Authorization: Bearer YOUR_API_KEY'
+```
+
+Replace `'https://your-api-url/transactions'` with the actual URL of your API endpoint and `'YOUR_API_KEY'` with your API key.
+
+3. **Getting Balance Transactions with a specific limit and startingAfter parameter**:
+```bash
+curl -X GET 'https://your-api-url/transactions?limit=20&startingAfter=tx_123456' -H 'Authorization: Bearer YOUR_API_KEY'
+```
+
+Replace `'https://your-api-url/transactions?limit=20&startingAfter=tx_123456'` with the actual URL of your API endpoint, `'20'` with the number of transactions you want to view, `'tx_123456'` with the id of the transaction you want to start viewing from, and `'YOUR_API_KEY'` with your API key.
+
+Please note, these examples presume that your API uses bearer token authentication and that your server expects the authorization in the header of the request. You should replace the `'YOUR_API_KEY'` with your actual API key or token. If your API uses a different type of authentication or passes the authorization in a different way, you will need to adjust these examples accordingly.
+

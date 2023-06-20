@@ -1,0 +1,176 @@
+write unit tests for such class:  public class StripeService : IStripeService
+    {
+        private readonly BalanceService balanceService;
+        private readonly BalanceTransactionService balanceTransactionService;
+
+        public StripeService(BalanceService balanceService, BalanceTransactionService balanceTransactionService)
+        {
+            this.balanceService = balanceService;
+            this.balanceTransactionService = balanceTransactionService;
+        }
+
+        public Task<Balance> GetBalanceAsync(CancellationToken cancellationToken = default)
+            => balanceService.GetAsync(cancellationToken: cancellationToken);
+
+        public Task<StripeList<BalanceTransaction>> GetBalanceTransactionsAsync(int limit, string startingAfter, CancellationToken cancellationToken = default)
+        {
+            var options = new BalanceTransactionListOptions
+            {
+                Limit = limit,
+                StartingAfter = startingAfter,
+            };
+
+            return balanceTransactionService.ListAsync(options, cancellationToken: cancellationToken);
+        }
+    }
+	
+	
+	
+	
+	
+	
+	
+	
+	
+First of all, you need to create a mock of your dependencies, which are `BalanceService` and `BalanceTransactionService`, to isolate the unit tests for your `StripeService` class. 
+
+Here is a simple unit test example using Moq and xUnit:
+
+```csharp
+using Moq;
+using Xunit;
+using System.Threading;
+using Stripe;
+using System.Threading.Tasks;
+
+public class StripeServiceTests
+{
+    private readonly Mock<BalanceService> mockBalanceService;
+    private readonly Mock<BalanceTransactionService> mockBalanceTransactionService;
+    private readonly StripeService stripeService;
+    private readonly CancellationToken cancellationToken;
+
+    public StripeServiceTests()
+    {
+        mockBalanceService = new Mock<BalanceService>();
+        mockBalanceTransactionService = new Mock<BalanceTransactionService>();
+        stripeService = new StripeService(mockBalanceService.Object, mockBalanceTransactionService.Object);
+        cancellationToken = new CancellationToken();
+    }
+
+    [Fact]
+    public async Task GetBalanceAsync_CallsBalanceService_GetAsync()
+    {
+        // Arrange
+        var expectedBalance = new Balance();
+        mockBalanceService.Setup(x => x.GetAsync(cancellationToken)).ReturnsAsync(expectedBalance);
+
+        // Act
+        var result = await stripeService.GetBalanceAsync(cancellationToken);
+
+        // Assert
+        mockBalanceService.Verify(x => x.GetAsync(cancellationToken), Times.Once);
+        Assert.Equal(expectedBalance, result);
+    }
+
+    [Fact]
+    public async Task GetBalanceTransactionsAsync_CallsBalanceTransactionService_ListAsync()
+    {
+        // Arrange
+        var limit = 5;
+        var startingAfter = "txn_123";
+        var expectedTransactions = new StripeList<BalanceTransaction>();
+        var options = new BalanceTransactionListOptions
+        {
+            Limit = limit,
+            StartingAfter = startingAfter,
+        };
+        mockBalanceTransactionService.Setup(x => x.ListAsync(options, cancellationToken)).ReturnsAsync(expectedTransactions);
+
+        // Act
+        var result = await stripeService.GetBalanceTransactionsAsync(limit, startingAfter, cancellationToken);
+
+        // Assert
+        mockBalanceTransactionService.Verify(x => x.ListAsync(It.Is<BalanceTransactionListOptions>(o => o.Limit == limit && o.StartingAfter == startingAfter), cancellationToken), Times.Once);
+        Assert.Equal(expectedTransactions, result);
+    }
+}
+```
+
+This unit test example is quite simple and straightforward. In a real-world project, you would probably have a more complex scenario to test. But, as a starting point, it should work. 
+
+Also, please note that you need to be careful with the `ListAsync` method of `BalanceTransactionService` because it is querying data from an external source (Stripe API). This method could return different results in different contexts, so it might be challenging to have a deterministic unit test. Mocking this method as it is done here would be the best approach. 
+
+Remember, unit tests are supposed to test only a single "unit" of code. If your code is calling an external service, that would be considered outside the unit, so you should mock or fake those calls.
+
+
+use NSubstitute instead of Moq
+
+
+Sure, here's an equivalent set of unit tests using NSubstitute:
+
+```csharp
+using NSubstitute;
+using Xunit;
+using System.Threading;
+using Stripe;
+using System.Threading.Tasks;
+
+public class StripeServiceTests
+{
+    private readonly BalanceService balanceService;
+    private readonly BalanceTransactionService balanceTransactionService;
+    private readonly StripeService stripeService;
+    private readonly CancellationToken cancellationToken;
+
+    public StripeServiceTests()
+    {
+        balanceService = Substitute.For<BalanceService>();
+        balanceTransactionService = Substitute.For<BalanceTransactionService>();
+        stripeService = new StripeService(balanceService, balanceTransactionService);
+        cancellationToken = new CancellationToken();
+    }
+
+    [Fact]
+    public async Task GetBalanceAsync_CallsBalanceService_GetAsync()
+    {
+        // Arrange
+        var expectedBalance = new Balance();
+        balanceService.GetAsync(cancellationToken).Returns(expectedBalance);
+
+        // Act
+        var result = await stripeService.GetBalanceAsync(cancellationToken);
+
+        // Assert
+        await balanceService.Received(1).GetAsync(cancellationToken);
+        Assert.Equal(expectedBalance, result);
+    }
+
+    [Fact]
+    public async Task GetBalanceTransactionsAsync_CallsBalanceTransactionService_ListAsync()
+    {
+        // Arrange
+        var limit = 5;
+        var startingAfter = "txn_123";
+        var expectedTransactions = new StripeList<BalanceTransaction>();
+        var options = new BalanceTransactionListOptions
+        {
+            Limit = limit,
+            StartingAfter = startingAfter,
+        };
+        balanceTransactionService.ListAsync(options, cancellationToken).Returns(expectedTransactions);
+
+        // Act
+        var result = await stripeService.GetBalanceTransactionsAsync(limit, startingAfter, cancellationToken);
+
+        // Assert
+        await balanceTransactionService.Received(1).ListAsync(Arg.Is<BalanceTransactionListOptions>(o => o.Limit == limit && o.StartingAfter == startingAfter), cancellationToken);
+        Assert.Equal(expectedTransactions, result);
+    }
+}
+```
+
+NSubstitute is another popular library for creating mock objects in .NET. The syntax is a bit different from Moq, but overall it is relatively simple to use, and it tends to be more concise and readable. As with Moq, these tests isolate the `StripeService` from its dependencies, allowing it to be tested independently.
+
+
+

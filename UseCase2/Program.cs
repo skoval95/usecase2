@@ -1,6 +1,16 @@
+using Stripe;
+
+using UseCase2.Interfaces;
+using UseCase2.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+var stripeApiKey = builder.Configuration["StripeApiKey"];
+StripeConfiguration.ApiKey = stripeApiKey;
+
+builder.Services.AddScoped<BalanceService>();
+builder.Services.AddScoped<IStripeService, StripeService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

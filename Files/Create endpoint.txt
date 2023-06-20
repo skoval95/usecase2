@@ -1,0 +1,174 @@
+Create the  .net 6 web api project controller with get endpoint.  o	After calling an endpoint above make a request to the public `Stripe` API to list balance. o	Wrap Stripe API calls in try-catch blocks to handle Stripe API errors.  Parse retrieved API response data in JSON to variable/object. Use Stripe.net library
+
+Creating the .NET 6 Web API project, a controller with a GET endpoint, and integrating the Stripe API requires several steps. Here's a general overview:
+
+### 1. Creating the Project
+
+Use the following .NET CLI command to create a new Web API project:
+
+```bash
+dotnet new webapi -n StripeIntegration
+```
+
+This command creates a new project in a new directory named `StripeIntegration`.
+
+### 2. Installing Stripe.net
+
+Navigate to the new project's directory and add the Stripe.net package:
+
+```bash
+cd StripeIntegration
+dotnet add package Stripe.net
+```
+
+### 3. Writing the Controller
+
+Create a new controller in the `Controllers` directory named `StripeController.cs` and add the following code:
+
+```csharp
+using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Stripe;
+
+namespace StripeIntegration.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class StripeController : ControllerBase
+    {
+        [HttpGet]
+        public async Task<IActionResult> GetBalance()
+        {
+            StripeConfiguration.ApiKey = "your_stripe_api_key_here"; // Replace with your Stripe API key
+
+            var service = new BalanceService();
+
+            try
+            {
+                var balance = await service.GetAsync();
+                return Ok(balance);
+            }
+            catch (StripeException e)
+            {
+                // Handle the Stripe errors
+                return BadRequest(new { error = e.Message });
+            }
+            catch (Exception e)
+            {
+                // Handle any other errors
+                return StatusCode(500, new { error = e.Message });
+            }
+        }
+    }
+}
+```
+
+Here, `GetBalance` is a GET endpoint that tries to retrieve the balance from the Stripe API using the `Stripe.net` library.
+
+Please replace `"your_stripe_api_key_here"` with your actual Stripe API key. 
+
+The `StripeException` will handle any Stripe-specific errors, such as API errors, invalid request errors, etc., while the general `Exception` is a catch-all for other potential errors. These exceptions are then returned as error messages in the HTTP response.
+
+Now you can run your project:
+
+```bash
+dotnet run
+```
+
+After your project is running, you can access your endpoint at `http://localhost:5000/api/stripe`. This will trigger a GET request to the Stripe API and return the balance.
+
+Please note that error handling can be extended based on specific requirements. Also, it's recommended to store sensitive data like your Stripe API key securely and not hardcode it in your source code. Consider using secrets management tools or environment variables for this purpose.
+
+
+create StripeService class and extract all logic to it
+
+Sure, it is a good practice to move business logic into separate service classes, keeping the controllers thin and easy to manage. Let's create a `StripeService`:
+
+First, create a new directory named `Services` in your project root. Inside this directory, create a new file called `StripeService.cs`:
+
+```csharp
+using System.Threading.Tasks;
+using Stripe;
+
+namespace StripeIntegration.Services
+{
+    public class StripeService
+    {
+        private readonly string _apiKey;
+
+        public StripeService(string apiKey)
+        {
+            _apiKey = apiKey;
+        }
+
+        public async Task<Balance> GetBalance()
+        {
+            StripeConfiguration.ApiKey = _apiKey;
+            var service = new BalanceService();
+
+            return await service.GetAsync();
+        }
+    }
+}
+```
+
+Here, `StripeService` is a class that encapsulates the Stripe API logic. It uses an API key provided at construction time to fetch the balance from the Stripe API.
+
+Now let's modify the `StripeController` to use the new `StripeService`:
+
+```csharp
+using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using StripeIntegration.Services;
+
+namespace StripeIntegration.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    public class StripeController : ControllerBase
+    {
+        private readonly StripeService _stripeService;
+
+        public StripeController(StripeService stripeService)
+        {
+            _stripeService = stripeService;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetBalance()
+        {
+            try
+            {
+                var balance = await _stripeService.GetBalance();
+                return Ok(balance);
+            }
+            catch (Stripe.StripeException e)
+            {
+                // Handle the Stripe errors
+                return BadRequest(new { error = e.Message });
+            }
+            catch (Exception e)
+            {
+                // Handle any other errors
+                return StatusCode(500, new { error = e.Message });
+            }
+        }
+    }
+}
+```
+
+Lastly, in your `Startup.cs` file, you need to register `StripeService` as a service in your application's DI container:
+
+```csharp
+public void ConfigureServices(IServiceCollection services)
+{
+    services.AddScoped<StripeService>(sp => new StripeService("your_stripe_api_key_here"));
+    // Other service configurations...
+}
+```
+
+Replace `"your_stripe_api_key_here"` with your actual Stripe API key. Again, it's recommended to store sensitive data like your Stripe API key securely and not hardcode it in your source code. Consider using secrets management tools or environment variables for this purpose.
+
+Now, when a `StripeController` is created, the DI container will automatically provide a `StripeService` instance to the constructor.
